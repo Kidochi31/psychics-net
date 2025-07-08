@@ -22,12 +22,51 @@ class FieldType(Enum):
 
 
 PACKET_FIELDS :dict[PacketType, list[tuple[str, FieldType]]] = ({
-    PacketType.REQUEST: [("vers", FieldType.INT8), ("version", FieldType.INT16), ("colorr", FieldType.INT8), ("colorg", FieldType.INT8), ("colorb", FieldType.INT8), ("pad", FieldType.PAD8), ("name", FieldType.VARCHAR), ("data", FieldType.ENDDATA)],
+    PacketType.REQUEST: [("vers", FieldType.INT8), ("version", FieldType.INT16), ("name", FieldType.VARCHAR), ("data", FieldType.ENDDATA)],
     PacketType.ACCEPT: [("vers", FieldType.INT8), ("version", FieldType.INT16), ("timestep0", FieldType.INT64), ("lentimestep", FieldType.INT16), ("pad", FieldType.PAD16), ("timestamp", FieldType.INT32), ("data", FieldType.ENDDATA)],
     PacketType.DATA: [("timestep", FieldType.INT24), ("timestamp", FieldType.INT16), ("delay", FieldType.SINT16), ("seg", FieldType.INT16), ("totalsegs", FieldType.INT16), ("data", FieldType.ENDDATA)],
     PacketType.NAK: [("timestep", FieldType.INT24), ("segs", FieldType.ENDVARINT16)]
     })
 
+def create_request_packet(vers: int, version: int, name: str, data: bytes) -> bytes | None:
+    result : dict[str, Any] = {}
+    result["vers"] = vers
+    result["version"] = version
+    result["name"] = name
+    result["data"] = data
+    return create_packet_safe(PacketType.REQUEST, result)
+
+def create_accept_packet(vers: int, version: int, timestep0: int, lentimestep: int, timestamp: int, data: bytes) -> bytes | None:
+    result : dict[str, Any] = {}
+    result["vers"] = vers
+    result["version"] = version
+    result["timestep0"] = timestep0
+    result["lentimestep"] = lentimestep
+    result["timestamp"] = timestamp
+    result["data"] = data
+    return create_packet_safe(PacketType.ACCEPT, result)
+
+def create_data_packet(timestep: int, timestamp: int, delay: int, seg: int, totalsegs: int, data: bytes) -> bytes | None:
+    result : dict[str, Any] = {}
+    result["timestep"] = timestep
+    result["timestamp"] = timestamp
+    result["delay"] = delay
+    result["seg"] = seg
+    result["totalsegs"] = totalsegs
+    result["data"] = data
+    return create_packet_safe(PacketType.DATA, result)
+
+def create_nak_packet(timestep: int, segs: list[int]) -> bytes | None:
+    result : dict[str, Any] = {}
+    result["timestep"] = timestep
+    result["segs"] = segs
+    return create_packet_safe(PacketType.NAK, result)
+
+def create_packet_safe(type: PacketType, data: dict[str, Any]) -> bytes | None:
+    try:
+        return create_packet(type, data)
+    except:
+        return None
 
 def create_packet(type: PacketType, data: dict[str, Any]) -> bytes:
     fields = PACKET_FIELDS[type]
@@ -78,6 +117,12 @@ def create_bytes(data: Any, type: FieldType) -> bytes:
             return result
         case FieldType.ENDDATA:
             return data
+
+def interpret_packet_safe(data: bytes) -> tuple[PacketType, dict[str, Any]] | None:
+    try:
+        return interpret_packet(data)
+    except:
+        return None
 
 def interpret_packet(data: bytes) -> tuple[PacketType, dict[str, Any]]:
     int_type, size = interpret_bytes(data, FieldType.INT8)

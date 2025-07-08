@@ -9,13 +9,10 @@ def test_request() -> bool:
     type = PacketType.REQUEST
     vers = randint(0, 255)
     version = randint(0, 65535)
-    colorr = randint(0, 255)
-    colorg = randint(0, 255)
-    colorb = randint(0, 255)
     name = random_names[randint(0, len(random_names) - 1)]
     data = b"request packet"
 
-    packet_data: dict[str, Any] = {"vers": vers, "version": version, "colorr": colorr, "colorg": colorg, "colorb": colorb, "name": name, "data": data}
+    packet_data: dict[str, Any] = {"vers": vers, "version": version, "name": name, "data": data}
     return test_packet(packet_data, type)
 
 def test_accept() -> bool:
