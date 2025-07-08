@@ -6,7 +6,7 @@ from time import time_ns
 
 VERS = 0
 VERSION = 0
-INIT_REQUEST_TIMEOUT_NS = 5_000_000_000
+init_request_timeout_ns = 100_000_000
 
 class PsychicClient:
     # Fields
@@ -34,7 +34,10 @@ class PsychicClient:
         if self.server is not None:
             return False
         self.server = server
-        return self._send_request_to_server(self.server)
+        if not self._send_request_to_server(self.server):
+            self._cancel_connect()
+            return False
+        return True
         
     def tick(self, data: bytes | None) -> ClientConnection | bool:
         # ticks the client forward. Ensure to run tick() before receiving or sending.
@@ -52,7 +55,7 @@ class PsychicClient:
                         return manage_result
                     # ignore packet
                 # check timeout
-                if time_ns() >= self.time_request_sent + INIT_REQUEST_TIMEOUT_NS:
+                if time_ns() >= self.time_request_sent + init_request_timeout_ns:
                     self.num_timeouts += 1
                     if self.num_timeouts >= self.max_timeouts:
                         # timeout
@@ -80,9 +83,12 @@ class PsychicClient:
         self.server = None 
     
     def _send_request_to_server(self, server: IP_endpoint) -> bool:
-        request = create_request_packet(VERS, VERSION, self.name, b'hello')
-        if request is not None:
-            self.socket.sendto(request, server)
-            self.time_request_sent = time_ns()
-            return True
+        try:
+            request = create_request_packet(VERS, VERSION, self.name, b'hello')
+            if request is not None:
+                self.socket.sendto(request, server)
+                self.time_request_sent = time_ns()
+                return True
+        except:
+            pass
         return False
