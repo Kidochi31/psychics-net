@@ -75,7 +75,12 @@ class ClientConnector:
         if data["version"] != VERSION:
             self.failed = True
             return
-        self.connection_info = ClientConnection(server)
+        rtt_ms = (time_ns() - self.time_request_sent) // 1_000_000
+        one_way_ms = rtt_ms // 2
+        timestamp = int(data["timestamp"])
+        server_time = timestamp + one_way_ms
+        server_time_minus_client_time = server_time - time_ns() // 1_000_000
+        self.connection_info = ClientConnection(server, rtt_ms, server_time_minus_client_time, data["lentimestep"], data["timestep0"], data["data"])
     
     def _send_request_to_server(self, server: IP_endpoint) -> bool:
         try:
